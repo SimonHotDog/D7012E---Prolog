@@ -38,7 +38,7 @@ proceed(
     move(1),
     state(robot(1, Inventory), Room1, Room2, Room3)) :- member(B, Inventory). 
 
-% Pick up actions:
+% Pick up item actions:
 
 proceed(
     state(robot(1, Inventory), Pre_Room1, Room2, Room3), % Picks up item in room 1
@@ -54,3 +54,22 @@ proceed(
     state(robot(3, Inventory), Room1, Room2, Pre_Room3), % Picks up item in room 3
     pick(Item),
     state(robot(3, [Item|Inventory]), Room1, Room2, Post_Room3)) :- length(Inventory, Len), L < 2, member(Item, Pre_Room3), delete(Pre_Room3, Item, Post_Room3). 
+
+% Drop item actions
+
+proceed(
+    state(robot(1, Pre_Inventory), Room1, Room2, Room3), % Drops item while in room 1
+    drop(Item),
+    state(robot(1, Post_Inventory), [Item|Room1], Room2, Room3)) :- member(Item, Pre_Inventory), delete(Pre_Inventory, Item, Post_Inventory).
+
+proceed(
+    state(robot(2, Pre_Inventory), Room1, Room2, Room3), % Drops item while in room 2
+    drop(Item),
+    state(robot(2, Post_Inventory), Room1, [Item|Room2], Room3)) :- member(Item, Pre_Inventory), delete(Pre_Inventory, Item, Post_Inventory).
+
+proceed(
+    state(robot(3, Pre_Inventory), Room1, Room2, Room3), % Drops item while in room 3
+    drop(Item),
+    state(robot(3, Post_Inventory), Room1, Room2, [Item|Room3])) :- member(Item, Pre_Inventory), delete(Pre_Inventory, Item, Post_Inventory).
+
+% Solving the puzzle
