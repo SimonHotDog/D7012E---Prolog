@@ -10,33 +10,27 @@
 %     Room3([Loot])
 % )
 
-% Items:
-%
-%  s = Steel Key
-%  b = Brass Key
-%  p = Package
-
 % Movement actions:
 
 proceed(
     state(robot(1, Inventory), Room1, Room2, Room3), % Moves from room 1 to room 2
     move(2),
-    state(robot(2, Inventory), Room1, Room2, Room3)) :- member(s, Inventory). 
+    state(robot(2, Inventory), Room1, Room2, Room3)) :- member(steel, Inventory). 
 
 proceed(
     state(robot(2, Inventory), Room1, Room2, Room3), % Moves from room 2 to room 1
     move(1),
-    state(robot(1, Inventory), Room1, Room2, Room3)) :- member(s, Inventory). 
+    state(robot(1, Inventory), Room1, Room2, Room3)) :- member(steel, Inventory). 
 
 proceed(
     state(robot(1, Inventory), Room1, Room2, Room3), % Moves from room 1 to room 3
     move(3),
-    state(robot(3, Inventory), Room1, Room2, Room3)) :- member(b, Inventory). 
+    state(robot(3, Inventory), Room1, Room2, Room3)) :- member(brass, Inventory). 
 
 proceed(
     state(robot(3, Inventory), Room1, Room2, Room3), % Moves from room 3 to room 1
     move(1),
-    state(robot(1, Inventory), Room1, Room2, Room3)) :- member(b, Inventory). 
+    state(robot(1, Inventory), Room1, Room2, Room3)) :- member(brass, Inventory). 
 
 % Pick up item actions:
 
@@ -74,10 +68,10 @@ proceed(
 
 % Solving the puzzle
 
-solveR(state(_, _, Room2, _), N, [finished | []]) :- member(p, Room2).
+solveR(state(_, _, Room2, _), N, [finished | []]) :- member(package, Room2).
 
 solveR(State0, N, [Proceed|T]) :- N > 0, proceed(State0, Proceed, State1), solveR(State1, N - 1, T).
 
-% For testing, run: solveR(state(robot(1, []), [s], [b], [p]), N, X).
+% For testing, run: solveR(state(robot(1, []), [steel], [brass], [package]), N, X).
 %
 % Minimum N for success is 12
