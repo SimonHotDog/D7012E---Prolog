@@ -3,8 +3,8 @@
 %    D7012E Declarative languages
 %    Luleå University of Technology
 %
-%    Student full name: <TO BE FILLED IN BEFORE THE GRADING> 
-%    Student user id  : <TO BE FILLED IN BEFORE THE GRADING> 
+%    Student full name: Simon Lundberg 
+%    Student user id  : lunsim-8 
 %
 /* ------------------------------------------------------- */
 
@@ -60,7 +60,15 @@
 
 
 
+% Self defined helpers
 
+calcScore([], _, 0).
+
+calcScore([Row, Rows], Player, Score) :- calcScore(Row, Player, Score1), calcScore(Rows, Player, Score2), Score is Score1 + Score2. % All rows
+
+calcScore([Position | Row], Player, Score) :- Position = Player, calcScore(Row, Player, Score1), Score is 1 + Score1. % Checks position in row. Point if player
+
+calcScore([Position | Row], Player, Score) :- Position \= Player, calcScore(Row, Player, Score). % No score, since not player
 
 % DO NOT CHANGE THE COMMENT BELOW.
 %
@@ -68,18 +76,19 @@
 
 initBoard([ [.,.,.,.,.,.], 
             [.,.,.,.,.,.],
-	    [.,.,1,2,.,.], 
-	    [.,.,2,1,.,.], 
+	    	[.,.,1,2,.,.], 
+	    	[.,.,2,1,.,.], 
             [.,.,.,.,.,.], 
-	    [.,.,.,.,.,.] ]).
+	    	[.,.,.,.,.,.] ]).
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
 %
 %%%%%%%%%%%%%%%%%% IMPLEMENT: initialize(...)%%%%%%%%%%%%%%%%%%%%%
 %%% Using initBoard define initialize(InitialState,InitialPlyr). 
 %%%  holds iff InitialState is the initial state and 
-%%%  InitialPlyr is the player who moves first. 
+%%%  InitialPlyr is the player who moves first.
 
+initialize(Board, 1) :- initBoard(Board).
 
 
 
@@ -92,8 +101,17 @@ initBoard([ [.,.,.,.,.,.],
 %     - returns winning player if State is a terminal position and
 %     Plyr has a higher score than the other player 
 
+winner(State, 1) :-
+	terminal(State),
+	calcScore(State, 1, Player1Score),
+	calcScore(State, 2, Player2Score),
+	Player1Score < Player2Score.
 
-
+winner(State, 2) :-
+	terminal(State),
+	calcScore(State, 1, Player1Score),
+	calcScore(State, 2, Player2Score),
+	Player2Score < Player1Score.
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -103,7 +121,11 @@ initBoard([ [.,.,.,.,.,.],
 %% define tie(State) here. 
 %    - true if terminal State is a "tie" (no winner) 
 
-
+tie(State) :-
+	terminal(State),
+	calcScore(State, 1, Player1Score),
+	calcScore(State, 2, Player2Score),
+	Player1Score =:= Player2Score.
 
 
 
@@ -112,10 +134,13 @@ initBoard([ [.,.,.,.,.,.],
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%terminal(...)%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
 %% define terminal(State). 
-%   - true if State is a terminal   
+%   - true if State is a terminal
 
-
-
+terminal(State) :-
+	moves(1, State, Moves1),
+	moves(2, State, Moves2),
+	Moves1 == [n],
+	Moves2 == [n].
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
@@ -147,8 +172,16 @@ printList([H | L]) :-
 %   - returns list MvList of all legal moves Plyr can make in State
 %
 
+moves(Plyr, State, MvList) :-
+	setof([X, Y], legitMoves(Plyr, State, [X, Y]), Moves), length(Moves, Len), Len \= 0, sort(0, @<, Moves, MvList).
+	
 
-
+moves(Plyr, State, [n]) :-
+	findall([X, Y], legitMoves(Plyr, State, [X, Y]), Moves), length(Moves, Len), L =:= 0.
+	
+legitMoves(Plyr, State, [X, Y]) :-
+	get(State, [X, Y], Z), Z = '.',
+	
 
 
 % DO NOT CHANGE THIS BLOCK OF COMMENTS.
