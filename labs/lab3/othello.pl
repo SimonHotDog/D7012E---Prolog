@@ -321,7 +321,7 @@ lowerBound(-101).
 %   - returns a value B that is greater than the actual or heuristic value
 %     of all states.
 
-lowerBound(101).
+upperBound(101).
 
 
 
