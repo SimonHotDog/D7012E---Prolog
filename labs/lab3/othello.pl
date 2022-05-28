@@ -1,24 +1,20 @@
+
 /* ------------------------------------------------------- */
 %
 %    D7012E Declarative languages
 %    Luleå University of Technology
 %
-%    Student full name: Simon Lundberg 
+%    Student full name: Simon Lundberg
 %    Student user id  : lunsim-8 
 %
 /* ------------------------------------------------------- */
 
-
-
-%do not chagne the follwoing line!
 :- ensure_loaded('play.pl').
+% :- ensure_loaded('stupid.pl'). % uncomment to make stupid computer replace the human player.
 
-
-% DO NOT CHANGE THIS BLOCK OF COMMENTS.
-%
 % /* ------------------------------------------------------ */
 %               IMPORTANT! PLEASE READ THIS SUMMARY:
-%       This files gives you some useful helpers (set &get).
+%       This files gives you some useful helpers (set & get).
 %       Your job is to implement several predicates using
 %       these helpers. Feel free to add your own helpers if
 %       needed, as long as you write comments (documentation)
@@ -39,17 +35,7 @@
 %          * h(State,Val)  (see question 2 in the handout)
 %          * lowerBound(B)
 %          * upperBound(B)
-% /* ------------------------------------------------------ */
-
-
-
-
-
-
-
-% /* ------------------------------------------------------ */
-
-% DO NOT CHANGE THIS BLOCK OF COMMENTS.
+%
 %
 % We use the following State Representation: 
 % [Row0, Row1 ... Rown] (ours is 6x6 so n = 5 ).
@@ -59,94 +45,75 @@
 %    2 means player two has a stone in this position. 
 
 
-
-% Self defined helpers
-
-calcScore([], _, 0).
-
-calcScore([Row, Rows], Player, Score) :- calcScore(Row, Player, Score1), calcScore(Rows, Player, Score2), Score is Score1 + Score2. % All rows
-
-calcScore([Position | Row], Player, Score) :- Position = Player, calcScore(Row, Player, Score1), Score is 1 + Score1. % Checks position in row. Point if player
-
-calcScore([Position | Row], Player, Score) :- Position \= Player, calcScore(Row, Player, Score). % No score, since not player
-
-% DO NOT CHANGE THE COMMENT BELOW.
-%
 % given helper: Inital state of the board
+
+cord(C) :- C = [n, ne, e, se, s, sw, w, nw].
 
 initBoard([ [.,.,.,.,.,.], 
             [.,.,.,.,.,.],
-	    	[.,.,1,2,.,.], 
-	    	[.,.,2,1,.,.], 
+	    			[.,.,1,2,.,.], 
+	    			[.,.,2,1,.,.], 
             [.,.,.,.,.,.], 
-	    	[.,.,.,.,.,.] ]).
+	    			[.,.,.,.,.,.] 
+					]).
 
-% DO NOT CHANGE THIS BLOCK OF COMMENTS.
-%
-%%%%%%%%%%%%%%%%%% IMPLEMENT: initialize(...)%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%% initialize(...) %%%%%%%%%%%%%%%%%%%%%%%%
 %%% Using initBoard define initialize(InitialState,InitialPlyr). 
 %%%  holds iff InitialState is the initial state and 
-%%%  InitialPlyr is the player who moves first.
+%%%  InitialPlyr is the player who moves first. 
 
 initialize(InitialState, 1) :- initBoard(InitialState).
 
 
-
-
-% DO NOT CHANGE THIS BLOCK OF COMMENTS.
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%winner(...)%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%% winner(...) %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
 %% define winner(State,Plyr) here.  
 %     - returns winning player if State is a terminal position and
-%     Plyr has a higher score than the other player 
+%     Plyr has a lower score than the other player 
 
-winner(State, 1) :-
+winner(State, Plyr) :-
 	terminal(State),
-	calcScore(State, 1, Player1Score),
-	calcScore(State, 2, Player2Score),
-	Player1Score < Player2Score.
+	calcScore(State, Player1, Player2),
+	(Player1 < Player2, Plyr = 1;
+	 Player1 > Player2, Plyr = 2).
 
-winner(State, 2) :-
-	terminal(State),
-	calcScore(State, 1, Player1Score),
-	calcScore(State, 2, Player2Score),
-	Player2Score < Player1Score.
+%% calcScore(State, Player1, Player2).
+%		- returns the score of current state for player1 and player2
+calcScore(State, Player1, Player2) :- 
+	flatten(State, Squares),
+	calcScore_aux(1, Squares, Player1),
+	calcScore_aux(2, Squares, Player2).
+
+calcScore_aux(_, [], 0) :- !.
+calcScore_aux(Plyr,[Plyr|Squares], Score) :- 
+	calcScore_aux(Plyr, Squares, S),
+	Score is S + 1, !.
+calcScore_aux(Plyr,[_|Squares], Score) :- 
+	calcScore_aux(Plyr, Squares, Score).
 
 
-% DO NOT CHANGE THIS BLOCK OF COMMENTS.
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%tie(...)%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%% tie(...) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
 %% define tie(State) here. 
 %    - true if terminal State is a "tie" (no winner) 
 
-tie(State) :-
-	terminal(State),
-	calcScore(State, 1, Player1Score),
-	calcScore(State, 2, Player2Score),
-	Player1Score =:= Player2Score.
+tie(State) :- 
+	terminal(State), 
+	calcScore(State, Score, Score), !.
 
 
-
-% DO NOT CHANGE THIS BLOCK OF COMMENTS.
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%terminal(...)%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%% terminal(...) %%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
 %% define terminal(State). 
 %   - true if State is a terminal
 
 terminal(State) :-
-	moves(1, State, Moves1),
-	moves(2, State, Moves2),
-	Moves1 == [n],
-	Moves2 == [n].
+	moves(1, State, Moves1), Moves1 = [n],
+	moves(2, State, Moves2), Moves2 = [n].
 
 
-% DO NOT CHANGE THIS BLOCK OF COMMENTS.
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%showState(State)%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% given helper. DO NOT  change this. It's used by play.pl
+%%%%%%%%%%%%%%%%%% showState(State) %%%%%%%%%%%%%%%%%%%%%%%
+%% given helper. Do not change this. It's used by play.pl
 %%
 
 showState( G ) :- 
@@ -164,129 +131,118 @@ printList([H | L]) :-
 	write(' '),
 	printList(L).
 
-% DO NOT CHANGE THIS BLOCK OF COMMENTS.
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%moves(Plyr,State,MvList)%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%% moves(Plyr,State,MvList) %%%%%%%%%%%%%%%
 %% 
 %% define moves(Plyr,State,MvList). 
 %   - returns list MvList of all legal moves Plyr can make in State
-%
 
-getBoardCords(C) :- findall([X, Y], isOnTheBoard([X, Y]), C).
+moves(Plyr, State, MvList) :- 
+	allBoardCoordinates(Cs),
+	movesInner(Plyr, State, Valid, Cs),
+	(Valid = [] -> MvList = [n], ! ; MvList = Valid).
 
-moves(Plyr, State, MvList) :-
-	getBoardCords(C), movesInner(Plyr, State, C, Valid),
-		(Valid = [] -> MvList = [n], ! ; MvList = Valid).
-	
 movesInner(_, _, [], []).
-movesInner(Plyr, State, [C|MvList], [C,C]) :-
-	validmove(Plyr, State, C), movesInner(Plyr, State, MvList, C), !.
-movesInner(Plyr, State, MvList, [_|C]) :- movesInner(Plyr, State, MvList, C). % To skip over invalid move.
-	
+movesInner(Plyr, State, [C|MvList], [C|Cs]) :-
+	validmove(Plyr, State, C),
+	movesInner(Plyr, State, MvList, Cs), !.
+
+movesInner(Plyr, State, MvList, [_|Cs]) :- movesInner(Plyr, State, MvList, Cs).
+
+%% allBoardCoordinates(Coordinates)
+%% Get all coordinates on the board, regardless of the squarestate.
+
+allBoardCoordinates(Coordinates) :- findall([X,Y], (between(0,5,X), between(0,5,Y)), Coordinates).
 
 
-% DO NOT CHANGE THIS BLOCK OF COMMENTS.
-%
-%%%%%%%%%%%%%%nextState(Plyr,Move,State,NewState,NextPlyr)%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%% nextState(Plyr,Move,State,NewState,NextPlyr) %%%%%%%%%%%%%%%%%%%%
 %% 
 %% define nextState(Plyr,Move,State,NewState,NextPlyr). 
 %   - given that Plyr makes Move in State, it determines NewState (i.e. the next 
 %     state) and NextPlayer (i.e. the next player who will move).
-%
 
-nextState(Plyr, n, State, State, NextPlyr) :- isEnemy(Plyr, NextPlyr), !.
+nextState(Plyr, n, State, State, NextPlyr) :- getEnemy(Plyr, NextPlyr), !.
 nextState(Plyr, Move, State, NewState, NextPlyr) :-
-	isEnemy(Plyr, NextPlyr),
-	flipper([n, ne, e, se, s, sw, w, nw], Plyr, State, Move, NewState).
+	getEnemy(Plyr, NextPlyr),
+	flipper(cord, Plyr, State, Move, NewState).
 
 
 flipper([], _, State, _, State) :- !.
-flipper([Dir|Dirs], Plyr, State, Pos, NextState) :-
-	flip(Dir, Plyr, State, Pos, InterState),
-	flipper(Dir, Plyr, InterState, Pos, NextState), !.
-flipper([_|Dirs], Plyr, State, Pos, NextState) :-
-	flipper(Dirs, Plyr, State, Pos, NextState).
+flipper([Dir|Dirs], Plyr, State, Position, NextState) :-
+	flip(Dir, Plyr, State, Position, InterState),
+	flipper(Dirs, Plyr, InterState, Position, NextState), !.
+flipper([_|Dirs], Plyr, State, Position, NextState) :-
+	flipper(Dirs, Plyr, State, Position, NextState).
 
 
-flip(Dir, Plyr, State, Pos, NextState) :-
-	getEnemyStones(Dir, Plyr, State, Pos, Score),
-	FlipNumber is Score + 1,
-	flipInner(Dir, Plyr, State, Pos, FlipNumber, NextState).
+flip(Direction, Plyr, State, Position, NextState) :-
+	flankScore(Direction, Plyr, State, Position, Score),
+	StonesToFlip is Score + 1,
+	flip_aux(Direction, Plyr, State, Position, StonesToFlip, NextState).
 
-flipInner(_, _, State, _, 0, State).
-flipInner(Dir, Plyr, State, Pos, FlipNumber, NextState) :-
-	FlipNumber > 0,
-	AfterFlip is FlipNumber - 1,
-	set(State, InterState, Pos, Plyr),
-	moveDir(Dir, Pos, NewPos),
-	flipInner(Dir, Plyr, InterState, NewPos, AfterFlip, NextState), !.
-
-
+flip_aux(_, _, State, _, 0, State).
+flip_aux(Direction, Plyr, State, Position, Stones, NextState) :-
+	Stones > 0,
+	StonesPost is Stones - 1,
+	set(State, MiddleState, Position, Plyr),
+	movedir(Direction, Position, NextPosition),
+	flip_aux(Direction, Plyr, MiddleState, NextPosition, StonesPost, NextState), !.
 
 
-
-
-% DO NOT CHANGE THIS BLOCK OF COMMENTS.
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%validmove(Plyr,State,Proposed)%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%% validmove(Plyr,State,Proposed) %%%%%%%%%
 %% 
 %% define validmove(Plyr,State,Proposed). 
 %   - true if Proposed move by Plyr is valid at State.
 
+validmove(Plyr, State, Proposed) :- 
+    get(State, Proposed, Square), Square = '.', cord(C),
+    validmoveInner(C, Plyr, State, Proposed).
 
-validmove(Plyr, State, Proposed) :-
-	get(State, Proposed, '.'),
-	(getEnemyStones(n, Plyr, State, Proposed, N), N > 0, !;
-	getEnemyStones(ne, Plyr, State, Proposed, Ne), Ne > 0, !;
-	getEnemyStones(e, Plyr, State, Proposed, E), E > 0, !;
-	getEnemyStones(se, Plyr, State, Proposed, Se), Se > 0, !;
-	getEnemyStones(s, Plyr, State, Proposed, S), S > 0, !;
-	getEnemyStones(sw, Plyr, State, Proposed, Sw), Sw > 0, !;
-	getEnemyStones(w, Plyr, State, Proposed, W), W > 0, !;
-	getEnemyStones(nw, Plyr, State, Proposed, Nw), Nw > 0).
+validmoveInner([], , , _) :- !, fail.
+validmoveInner([C|CS], Plyr, State, Proposed) :-
+    flankScore(C, Plyr, State, Proposed, S), S > 0, !.
+validmoveInner([_|CS], Plyr, State, Proposed) :- validmoveInner(CS, Plyr, State, Proposed).
+	
 
-% checks how many stones between player and the placement of a stone
-getEnemyStones(Dir, Plyr, State, Proposed, Score) :-
+
+%% flankScore(Direction, Plyr, State, Proposed, Score)
+%		Get number of opponent stones between proposed stone placement and closest player stone in a direction.
+%		- fails if no a valid move can be made in the specified direction
+flankScore(Direction, Plyr, State, Proposed, Score) :-
 	isOnTheBoard(Proposed),
-	moveDir(Dir, Proposed, [X, Y]),
-	get(State, [X, Y], Square),
-	isEnemy(Plyr, Enemy),
-	(Square = Enemy, 
-		getEnemyStones(Dir, Plyr, State, [X, Y], S),
-		Score is S + 1, !
-	; 
-		Square = Plyr,
-		Score is 0, !
-	;
+	movedir(Direction, Proposed, [X1,Y1]),
+	get(State, [X1,Y1], Square),
+	getEnemy(Plyr, Enemy),
+	(Square = Enemy,
+		flankScore(Direction, Plyr, State, [X1,Y1], S), Score is S + 1, !;
+		Square = Plyr, Score is 0, !;
 		fail
 	).
 
-moveDir(n, [X, Y], [X, Y1]) :- 
+
+movedir(n, [X, Y], [X, Y1]) :- % n
 	Y1 is Y - 1.
-moveDir(ne, [X, Y], [X1, Y1]) :- 
+movedir(ne, [X, Y], [X1, Y1]) :- % ne
 	X1 is X + 1,
 	Y1 is Y - 1.
-moveDir(e, [X, Y], [X1, Y]) :- 
+movedir(e, [X, Y], [X1, Y]) :- % e
 	X1 is X + 1.
-moveDir(se, [X, Y], [X1, Y1]) :- 
+movedir(se, [X, Y], [X1, Y1]) :- % se
 	X1 is X + 1,
 	Y1 is Y + 1.
-moveDir(s, [X, Y], [X, Y1]) :- 
+movedir(s, [X, Y], [X, Y1]) :- % s
 	Y1 is Y + 1.
-moveDir(sw, [X, Y], [X1, Y1]) :- 
+movedir(sw, [X, Y], [X1, Y1]) :- % sw
 	X1 is X - 1,
 	Y1 is Y + 1.
-moveDir(w, [X, Y], [X1, Y]) :- 
+movedir(w, [X, Y], [X1, Y]) :- % w
 	X1 is X -1.
-moveDir(nw, [X, Y], [X1, Y1]) :- 
+movedir(nw, [X, Y], [X1, Y1]) :- % nw
 	X1 is X - 1,
 	Y1 is Y - 1.
 
 
-
-% DO NOT CHANGE THIS BLOCK OF COMMENTS.
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%h(State,Val)%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%% h(State,Val)%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 
 %% define h(State,Val). 
 %   - given State, returns heuristic Val of that state
@@ -296,13 +252,12 @@ moveDir(nw, [X, Y], [X1, Y1]) :-
 %          the value of state (see handout on ideas about
 %          good heuristics.
 
-h(State, Val) :- calcScore(State, 1, S1), calcScore(State, 2, S2), Val is S2 - S1.
+h(State, 100) :- winner(State, 1), !.
+h(State, -100) :- winner(State, 2), !.
+h(_, 0).
 
 
-
-% DO NOT CHANGE THIS BLOCK OF COMMENTS.
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%lowerBound(B)%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%% lowerBound(B)%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 
 %% define lowerBound(B).  
 %   - returns a value B that is less than the actual or heuristic value
@@ -311,11 +266,7 @@ h(State, Val) :- calcScore(State, 1, S1), calcScore(State, 2, S2), Val is S2 - S
 lowerBound(-101).
 
 
-
-
-% DO NOT CHANGE THIS BLOCK OF COMMENTS.
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%upperBound(B)%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%% upperBound(B)%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 
 %% define upperBound(B). 
 %   - returns a value B that is greater than the actual or heuristic value
@@ -324,16 +275,6 @@ lowerBound(-101).
 upperBound(101).
 
 
-
-% DO NOT CHANGE THIS BLOCK OF COMMENTS.
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%                                                                       %
-%                                                                       %
-%                Given   UTILITIES                                      %
-%                   do NOT change these!                                %
-%                                                                       %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % get(Board, Point, Element)
 %    : get the contents of the board at position column X and row Y
 % set(Board, NewBoard, [X, Y], Value):
@@ -387,8 +328,7 @@ upperBound(101).
 %NB2 = [['.', '.', '.', '.', '.', '.'], ['.', '.', '.', '.', '.', '.'], ['.', '.'
 %, 1, 2, '.', '.'], ['.', '.', 1, 1, '.'|...], ['.', '.', 1, '.'|...], ['.', 
 %'.', '.'|...]]
-
-% DO NOT CHANGE THIS BLOCK OF COMMENTS.
+%
 %
 % get(Board, Point, Element): get the value of the board at position
 % column X and row Y (indexing starts at 0).
@@ -398,8 +338,6 @@ get( Board, [X, Y], Value) :-
 	nth0( Y, Board, ListY), 
 	nth0( X, ListY, Value).
 
-% DO NOT CHANGE THIS BLOCK OF COMMENTS.
-%
 % set( Board, NewBoard, [X, Y], Value): set the value of the board at position
 % column X and row Y to Value (indexing starts at 0). Returns the new board as
 % NewBoard. Do not change set:
@@ -412,8 +350,6 @@ set( [Row|RestRows], [Row|NewRestRows], [X, Y], Value) :-
     Y1 is Y-1, 
     set( RestRows, NewRestRows, [X, Y1], Value). 
 
-% DO NOT CHANGE THIS BLOCK OF COMMENTS.
-%
 % setInList( List, NewList, Index, Value): given helper to set. Do not
 % change setInList:
 
@@ -422,16 +358,13 @@ setInList( [_|RestList], [Value|RestList], 0, Value).
 setInList( [Element|RestList], [Element|NewRestList], Index, Value) :- 
 	Index > 0, 
 	Index1 is Index-1, 
-	setInList( RestList, NewRestList, Index1, Value). 
- 
-%%%%% Helpers %%%%%%%%%
-%
-%Placed here since they didn't really belong anywhere else
-%
+	setInList( RestList, NewRestList, Index1, Value).
 
-% Gets the enemy
-isEnemy(1, 2).
-isEnemy(2, 1).
+%% helpers
 
-% Check if coordinates are on the board
-isOnTheBoard([X, Y]) :- between(0, 5, X), between(0, 5, Y).
+%% get enemy
+getEnemy(1, 2).
+getEnemy(2, 1).
+
+%% Checks if the coordinate is on the board
+isOnTheBoard([X,Y]) :- between(0, 5, X), between(0, 5, Y).
