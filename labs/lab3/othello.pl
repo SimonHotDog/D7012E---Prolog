@@ -88,7 +88,7 @@ initBoard([ [.,.,.,.,.,.],
 %%%  holds iff InitialState is the initial state and 
 %%%  InitialPlyr is the player who moves first.
 
-initialize(Board, 1) :- initBoard(Board).
+initialize(InitialState, 1) :- initBoard(InitialState).
 
 
 
@@ -172,15 +172,16 @@ printList([H | L]) :-
 %   - returns list MvList of all legal moves Plyr can make in State
 %
 
-moves(Plyr, State, MvList) :-
-	setof([X, Y], legitMoves(Plyr, State, [X, Y]), Moves), length(Moves, Len), Len \= 0, sort(0, @<, Moves, MvList).
-	
+getBoardCords(C) :- findall([X, Y], isOnTheBoard([X, Y]), C).
 
-moves(Plyr, State, [n]) :-
-	findall([X, Y], legitMoves(Plyr, State, [X, Y]), Moves), length(Moves, Len), L =:= 0.
+moves(Plyr, State, MvList) :-
+	getBoardCords(C), movesInner(Plyr, State, C, Valid),
+		(Valid = [] -> MvList = [n], ! ; MvList = Valid).
 	
-legitMoves(Plyr, State, [X, Y]) :-
-	get(State, [X, Y], Z), Z = '.',
+movesInner(_, _, [], []).
+movesInner(Plyr, State, [C|MvList], [C,C]) :-
+	validmove(Plyr, State, C), movesInner(Plyr, State, MvList, C), !.
+movesInner(Plyr, State, MvList, [_|C]) :- movesInner(Plyr, State, MvList, C). % To skip over invalid move.
 	
 
 
@@ -192,6 +193,34 @@ legitMoves(Plyr, State, [X, Y]) :-
 %   - given that Plyr makes Move in State, it determines NewState (i.e. the next 
 %     state) and NextPlayer (i.e. the next player who will move).
 %
+
+nextState(Plyr, n, State, State, NextPlyr) :- isEnemy(Plyr, NextPlyr), !.
+nextState(Plyr, Move, State, NewState, NextPlyr) :-
+	isEnemy(Plyr, NextPlyr),
+	flipper([n, ne, e, se, s, sw, w, nw], Plyr, State, Move, NewState).
+
+
+flipper([], _, State, _, State) :- !.
+flipper([Dir|Dirs], Plyr, State, Pos, NextState) :-
+	flip(Dir, Plyr, State, Pos, InterState),
+	flipper(Dir, Plyr, InterState, Pos, NextState), !.
+flipper([_|Dirs], Plyr, State, Pos, NextState) :-
+	flipper(Dirs, Plyr, State, Pos, NextState).
+
+
+flip(Dir, Plyr, State, Pos, NextState) :-
+	getEnemyStones(Dir, Plyr, State, Pos, Score),
+	FlipNumber is Score + 1,
+	flipInner(Dir, Plyr, State, Pos, FlipNumber, NextState).
+
+flipInner(_, _, State, _, 0, State).
+flipInner(Dir, Plyr, State, Pos, FlipNumber, NextState) :-
+	FlipNumber > 0,
+	AfterFlip is FlipNumber - 1,
+	set(State, InterState, Pos, Plyr),
+	moveDir(Dir, Pos, NewPos),
+	flipInner(Dir, Plyr, InterState, NewPos, AfterFlip, NextState), !.
+
 
 
 
@@ -205,6 +234,53 @@ legitMoves(Plyr, State, [X, Y]) :-
 %   - true if Proposed move by Plyr is valid at State.
 
 
+validmove(Plyr, State, Proposed) :-
+	get(State, Proposed, '.'),
+	(getEnemyStones(n, Plyr, State, Proposed, N), N > 0, !;
+	getEnemyStones(ne, Plyr, State, Proposed, Ne), Ne > 0, !;
+	getEnemyStones(e, Plyr, State, Proposed, E), E > 0, !;
+	getEnemyStones(se, Plyr, State, Proposed, Se), Se > 0, !;
+	getEnemyStones(s, Plyr, State, Proposed, S), S > 0, !;
+	getEnemyStones(sw, Plyr, State, Proposed, Sw), Sw > 0, !;
+	getEnemyStones(w, Plyr, State, Proposed, W), W > 0, !;
+	getEnemyStones(nw, Plyr, State, Proposed, Nw), Nw > 0).
+
+% checks how many stones between player and the placement of a stone
+getEnemyStones(Dir, Plyr, State, Proposed, Score) :-
+	isOnTheBoard(Proposed),
+	moveDir(Dir, Proposed, [X, Y]),
+	get(State, [X, Y], Square),
+	isEnemy(Plyr, Enemy),
+	(Square = Enemy, 
+		getEnemyStones(Dir, Plyr, State, [X, Y], S),
+		Score is S + 1, !
+	; 
+		Square = Plyr,
+		Score is 0, !
+	;
+		fail
+	).
+
+moveDir(n, [X, Y], [X, Y1]) :- 
+	Y1 is Y - 1.
+moveDir(ne, [X, Y], [X1, Y1]) :- 
+	X1 is X + 1,
+	Y1 is Y - 1.
+moveDir(e, [X, Y], [X1, Y]) :- 
+	X1 is X + 1.
+moveDir(se, [X, Y], [X1, Y1]) :- 
+	X1 is X + 1,
+	Y1 is Y + 1.
+moveDir(s, [X, Y], [X, Y1]) :- 
+	Y1 is Y + 1.
+moveDir(sw, [X, Y], [X1, Y1]) :- 
+	X1 is X - 1,
+	Y1 is Y + 1.
+moveDir(w, [X, Y], [X1, Y]) :- 
+	X1 is X -1.
+moveDir(nw, [X, Y], [X1, Y1]) :- 
+	X1 is X - 1,
+	Y1 is Y - 1.
 
 
 
@@ -220,7 +296,7 @@ legitMoves(Plyr, State, [X, Y]) :-
 %          the value of state (see handout on ideas about
 %          good heuristics.
 
-
+h(State, Val) :- calcScore(State, 1, S1), calcScore(State, 2, S2), Val is S2 - S1.
 
 
 
@@ -232,6 +308,7 @@ legitMoves(Plyr, State, [X, Y]) :-
 %   - returns a value B that is less than the actual or heuristic value
 %     of all states.
 
+lowerBound(-101).
 
 
 
@@ -244,7 +321,7 @@ legitMoves(Plyr, State, [X, Y]) :-
 %   - returns a value B that is greater than the actual or heuristic value
 %     of all states.
 
-
+lowerBound(101).
 
 
 
@@ -347,3 +424,14 @@ setInList( [Element|RestList], [Element|NewRestList], Index, Value) :-
 	Index1 is Index-1, 
 	setInList( RestList, NewRestList, Index1, Value). 
  
+%%%%% Helpers %%%%%%%%%
+%
+%Placed here since they didn't really belong anywhere else
+%
+
+% Gets the enemy
+isEnemy(1, 2).
+isEnemy(2, 1).
+
+% Check if coordinates are on the board
+isOnTheBoard([X, Y]) :- between(0, 5, X), between(0, 5, Y).
