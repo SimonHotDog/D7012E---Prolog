@@ -51,19 +51,25 @@ cord(C) :- C = [n, ne, e, se, s, sw, w, nw].
 
 initBoard([ [.,.,.,.,.,.], 
             [.,.,.,.,.,.],
-	    			[.,.,1,2,.,.], 
-	    			[.,.,2,1,.,.], 
+	    	[.,.,1,2,.,.], 
+	    	[.,.,2,1,.,.], 
             [.,.,.,.,.,.], 
-	    			[.,.,.,.,.,.] 
-					]).
+	    	[.,.,.,.,.,.] ]).
+
+termtest([  [2,2,2,2,2,2], 
+            [2,2,2,1,2,2],
+	    	[2,1,2,2,2,2], 
+	    	[2,1,2,1,2,1], 
+            [2,2,1,2,1,.], 
+	    	[2,1,1,1,1,.]  ]).
 
 %%%%%%%%%%%%%%%%%% initialize(...) %%%%%%%%%%%%%%%%%%%%%%%%
 %%% Using initBoard define initialize(InitialState,InitialPlyr). 
 %%%  holds iff InitialState is the initial state and 
 %%%  InitialPlyr is the player who moves first. 
 
-initialize(InitialState, 1) :- initBoard(InitialState).
-
+%initialize(InitialState, 1) :- initBoard(InitialState).
+initialize(InitialState, 1) :- termtest(InitialState).
 
 %%%%%%%%%%%%%%%%%% winner(...) %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
@@ -81,15 +87,15 @@ winner(State, Plyr) :-
 %		- returns the score of current state for player1 and player2
 calcScore(State, Player1, Player2) :- 
 	flatten(State, Squares),
-	calcScore_aux(1, Squares, Player1),
-	calcScore_aux(2, Squares, Player2).
+	calcScoreInner(1, Squares, Player1),
+	calcScoreInner(2, Squares, Player2).
 
-calcScore_aux(_, [], 0) :- !.
-calcScore_aux(Plyr,[Plyr|Squares], Score) :- 
-	calcScore_aux(Plyr, Squares, S),
+calcScoreInner(_, [], 0) :- !.
+calcScoreInner(Plyr,[Plyr|Squares], Score) :- 
+	calcScoreInner(Plyr, Squares, S),
 	Score is S + 1, !.
-calcScore_aux(Plyr,[_|Squares], Score) :- 
-	calcScore_aux(Plyr, Squares, Score).
+calcScoreInner(Plyr,[_|Squares], Score) :- 
+	calcScoreInner(Plyr, Squares, Score).
 
 
 %%%%%%%%%%%%%%%%%% tie(...) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -138,7 +144,7 @@ printList([H | L]) :-
 %   - returns list MvList of all legal moves Plyr can make in State
 
 moves(Plyr, State, MvList) :- 
-	allBoardCoordinates(Cs),
+	getAllCords(Cs),
 	movesInner(Plyr, State, Valid, Cs),
 	(Valid = [] -> MvList = [n], ! ; MvList = Valid).
 
@@ -149,11 +155,6 @@ movesInner(Plyr, State, [C|MvList], [C|Cs]) :-
 
 movesInner(Plyr, State, MvList, [_|Cs]) :- movesInner(Plyr, State, MvList, Cs).
 
-%% allBoardCoordinates(Coordinates)
-%% Get all coordinates on the board, regardless of the squarestate.
-
-allBoardCoordinates(Coordinates) :- findall([X,Y], (between(0,5,X), between(0,5,Y)), Coordinates).
-
 
 %%%%%%%%%%%%%%%%%% nextState(Plyr,Move,State,NewState,NextPlyr) %%%%%%%%%%%%%%%%%%%%
 %% 
@@ -161,10 +162,10 @@ allBoardCoordinates(Coordinates) :- findall([X,Y], (between(0,5,X), between(0,5,
 %   - given that Plyr makes Move in State, it determines NewState (i.e. the next 
 %     state) and NextPlayer (i.e. the next player who will move).
 
-nextState(Plyr, n, State, State, NextPlyr) :- getEnemy(Plyr, NextPlyr), !.
+nextState(Plyr, pass, State, State, NextPlyr) :- getEnemy(Plyr, NextPlyr), !.
 nextState(Plyr, Move, State, NewState, NextPlyr) :-
-	getEnemy(Plyr, NextPlyr),
-	flipper(cord, Plyr, State, Move, NewState).
+	getEnemy(Plyr, NextPlyr), cord(C),
+	flipper(C, Plyr, State, Move, NewState).
 
 
 flipper([], _, State, _, State) :- !.
@@ -175,18 +176,18 @@ flipper([_|Dirs], Plyr, State, Position, NextState) :-
 	flipper(Dirs, Plyr, State, Position, NextState).
 
 
-flip(Direction, Plyr, State, Position, NextState) :-
-	flankScore(Direction, Plyr, State, Position, Score),
-	StonesToFlip is Score + 1,
-	flip_aux(Direction, Plyr, State, Position, StonesToFlip, NextState).
+flip(Dir, Plyr, State, Pos, NextState) :-
+	inTheWay(Dir, Plyr, State, Pos, S),
+	FlipNumber is S + 1,
+	flipInner(Dir, Plyr, State, Pos, FlipNumber, NextState).
 
-flip_aux(_, _, State, _, 0, State).
-flip_aux(Direction, Plyr, State, Position, Stones, NextState) :-
-	Stones > 0,
-	StonesPost is Stones - 1,
-	set(State, MiddleState, Position, Plyr),
-	movedir(Direction, Position, NextPosition),
-	flip_aux(Direction, Plyr, MiddleState, NextPosition, StonesPost, NextState), !.
+flipInner(_, _, State, _, 0, State).
+flipInner(Dir, Plyr, State, Pos, FlipNumber, NextState) :-
+	FlipNumber > 0,
+	AfterFlip is FlipNumber - 1,
+	set(State, InterState, Pos, Plyr),
+	movedir(Dir, Pos, NextPos),
+	flipInner(Dir, Plyr, InterState, NextPos, AfterFlip, NextState), !.
 
 
 %%%%%%%%%%%%%%%%%% validmove(Plyr,State,Proposed) %%%%%%%%%
@@ -197,49 +198,52 @@ flip_aux(Direction, Plyr, State, Position, Stones, NextState) :-
 validmove(Plyr, State, Proposed) :- 
     get(State, Proposed, Square), Square = '.', cord(C),
     validmoveInner(C, Plyr, State, Proposed).
+validmove(Plyr, State, pass) :- moves(Plyr, State, Moves), Moves = [n], !.
 
 validmoveInner([], , , _) :- !, fail.
-validmoveInner([C|CS], Plyr, State, Proposed) :-
-    flankScore(C, Plyr, State, Proposed, S), S > 0, !.
+validmoveInner([C|_], Plyr, State, Proposed) :-
+    inTheWay(C, Plyr, State, Proposed, S), S > 0, !.
 validmoveInner([_|CS], Plyr, State, Proposed) :- validmoveInner(CS, Plyr, State, Proposed).
+
 	
 
 
-%% flankScore(Direction, Plyr, State, Proposed, Score)
-%		Get number of opponent stones between proposed stone placement and closest player stone in a direction.
-%		- fails if no a valid move can be made in the specified direction
-flankScore(Direction, Plyr, State, Proposed, Score) :-
+% Checks stones that are inbetween the player and the proposed move. returns score
+
+inTheWay(Dir, Plyr, State, Proposed, Score) :-
 	isOnTheBoard(Proposed),
-	movedir(Direction, Proposed, [X1,Y1]),
-	get(State, [X1,Y1], Square),
+	movedir(Dir, Proposed, [NewX, NewY]),
+	get(State, [NewX, NewY], Square),
 	getEnemy(Plyr, Enemy),
-	(Square = Enemy,
-		flankScore(Direction, Plyr, State, [X1,Y1], S), Score is S + 1, !;
-		Square = Plyr, Score is 0, !;
-		fail
-	).
+	(Square = Enemy, inTheWay(Dir, Plyr, State, [NewX, NewY], S), Score is S + 1, !;
+	 Square = Plyr, Score is 0, !;
+	 fail).
 
+%%%%%% MOVEMENTS %%%%%%%
 
-movedir(n, [X, Y], [X, Y1]) :- % n
-	Y1 is Y - 1.
-movedir(ne, [X, Y], [X1, Y1]) :- % ne
-	X1 is X + 1,
-	Y1 is Y - 1.
-movedir(e, [X, Y], [X1, Y]) :- % e
-	X1 is X + 1.
-movedir(se, [X, Y], [X1, Y1]) :- % se
-	X1 is X + 1,
-	Y1 is Y + 1.
-movedir(s, [X, Y], [X, Y1]) :- % s
-	Y1 is Y + 1.
-movedir(sw, [X, Y], [X1, Y1]) :- % sw
-	X1 is X - 1,
-	Y1 is Y + 1.
-movedir(w, [X, Y], [X1, Y]) :- % w
-	X1 is X -1.
-movedir(nw, [X, Y], [X1, Y1]) :- % nw
-	X1 is X - 1,
-	Y1 is Y - 1.
+%North
+movedir(n, [X, Y], [X, NewY]) :- NewY is Y - 1.
+
+%North East
+movedir(ne, [X, Y], [NewX, NewY]) :- NewX is X + 1, NewY is Y - 1.
+
+%East
+movedir(e, [X, Y], [NewX, Y]) :- NewX is X + 1.
+
+%South East
+movedir(se, [X, Y], [NewX, NewY]) :- NewX is X + 1, NewY is Y + 1.
+
+%South
+movedir(s, [X, Y], [X, NewY]) :- NewY is Y + 1.
+
+%South West
+movedir(sw, [X, Y], [NewX, NewY]) :- NewX is X - 1, NewY is Y + 1.
+
+%West
+movedir(w, [X, Y], [NewX, Y]) :- NewX is X -1.
+
+%North West
+movedir(nw, [X, Y], [NewX, NewY]) :- NewX is X - 1, NewY is Y - 1.
 
 
 %%%%%%%%%%%%%%%%%% h(State,Val)%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -368,3 +372,6 @@ getEnemy(2, 1).
 
 %% Checks if the coordinate is on the board
 isOnTheBoard([X,Y]) :- between(0, 5, X), between(0, 5, Y).
+
+% Get all coordinates on the board
+getAllCords(Coordinates) :- findall([X,Y], isOnTheBoard([X,Y]), Coordinates).
