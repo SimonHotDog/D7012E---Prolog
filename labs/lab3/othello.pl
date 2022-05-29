@@ -260,9 +260,19 @@ movedir(nw, [X, Y], [NewX, NewY]) :- NewX is X - 1, NewY is Y - 1.
 %          the value of state (see handout on ideas about
 %          good heuristics.
 
-h(State, 100) :- winner(State, 1), !.
-h(State, -100) :- winner(State, 2), !.
-h(_, 0).
+h(State, Val) :-
+	score(State, 1, S1),
+	score(State, 2, S2),
+	Val is S2 - S1.
+
+h(State, -37) :- 
+	winner(State, 1).
+
+h(State, 37) :- 
+	winner(State , 2).
+
+h(State, 0) :-
+	tie(State).
 
 
 %%%%%%%%%%%%%%%%%% lowerBound(B)%%%%%%%%%%%%%%%%%%%%%%%%%
