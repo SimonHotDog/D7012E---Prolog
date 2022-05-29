@@ -87,26 +87,15 @@ winner(S1, S2, Plyr) :-
 	(S1 < S2, Plyr is 1) ; Plyr is 2.
 
 score([], _, 0).
+%For each row
 score([R | RS], Plyr, S) :-
 	score(R, Plyr, S1), score(RS, Plyr, S2), S is S1 + S2.
 
-score([X | R], Plyr, S) :-
+%Each point in row
+score([X | R], Plyr, S) :- 
 	X = Plyr, score(R, Plyr, S1), S is 1 + S1.
-
 score([X | R], Plyr, S) :-
 	X \= Plyr, score(R, Plyr, S).
-
-%calcScore(State, Player1, Player2) :- 
-%	flatten(State, Squares),
-%	calcScoreInner(1, Squares, Player1),
-%	calcScoreInner(2, Squares, Player2).
-%
-%calcScoreInner(_, [], 0) :- !.
-%calcScoreInner(Plyr,[Plyr|Squares], Score) :- 
-%	calcScoreInner(Plyr, Squares, S),
-%	Score is S + 1, !.
-%calcScoreInner(Plyr,[_|Squares], Score) :- 
-%	calcScoreInner(Plyr, Squares, Score).
 
 
 %%%%%%%%%%%%%%%%%% tie(...) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
