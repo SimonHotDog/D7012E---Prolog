@@ -107,11 +107,9 @@ getmove(1,State,Move) :-
     random_permutation(Moves, Perm), % permute the squares
     % writeln(Perm), % uncomment to see all empty squares
     member(Proposed,Perm), % try one square at a time
-    Proposed = [X, Y],
-    ProposedNewFormat = (X, Y),
-    write('Stupid is trying move '),write(ProposedNewFormat),
-    (validmove(1,State,ProposedNewFormat)
-        -> !, Move = ProposedNewFormat, nl
+    write('Stupid is trying move '),write(Proposed),
+    (validmove(1,State,Proposed)
+        -> !, Move = Proposed, nl
         ;  writeln(' ... *** Invalid! ***'), fail % backtrack and try another square
     ).
 

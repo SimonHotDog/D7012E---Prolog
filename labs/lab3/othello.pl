@@ -9,8 +9,8 @@
 %
 /* ------------------------------------------------------- */
 
-:- ensure_loaded('play.pl').
-% :- ensure_loaded('stupid.pl'). % uncomment to make stupid computer replace the human player.
+%:- ensure_loaded('play.pl').
+:- ensure_loaded('stupid.pl'). % uncomment to make stupid computer replace the human player.
 
 % /* ------------------------------------------------------ */
 %               IMPORTANT! PLEASE READ THIS SUMMARY:
@@ -68,8 +68,8 @@ termtest([  [2,2,2,2,2,2],
 %%%  holds iff InitialState is the initial state and 
 %%%  InitialPlyr is the player who moves first. 
 
-%initialize(InitialState, 1) :- initBoard(InitialState).
-initialize(InitialState, 1) :- termtest(InitialState).
+initialize(InitialState, 1) :- initBoard(InitialState).
+%initialize(InitialState, 1) :- termtest(InitialState).
 
 %%%%%%%%%%%%%%%%%% winner(...) %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
@@ -165,7 +165,7 @@ movesInner(Plyr, State, MvList, [_|Cs]) :- movesInner(Plyr, State, MvList, Cs).
 %   - given that Plyr makes Move in State, it determines NewState (i.e. the next 
 %     state) and NextPlayer (i.e. the next player who will move).
 
-nextState(Plyr, pass, State, State, NextPlyr) :- getEnemy(Plyr, NextPlyr), !.
+nextState(Plyr, n, State, State, NextPlyr) :- getEnemy(Plyr, NextPlyr), !.
 nextState(Plyr, Move, State, NewState, NextPlyr) :-
 	getEnemy(Plyr, NextPlyr), cord(C),
 	flipOuter(C, Plyr, State, Move, NewState).
@@ -260,19 +260,7 @@ movedir(nw, [X, Y], [NewX, NewY]) :- NewX is X - 1, NewY is Y - 1.
 %          the value of state (see handout on ideas about
 %          good heuristics.
 
-h(State, Val) :-
-	score(State, 1, S1),
-	score(State, 2, S2),
-	Val is S2 - S1.
-
-h(State, -37) :- 
-	winner(State, 1).
-
-h(State, 37) :- 
-	winner(State , 2).
-
-h(State, 0) :-
-	tie(State).
+h(State, Val) :- score(State, 1, S1), score(State, 2, S2), Val is S2 - S1.
 
 
 %%%%%%%%%%%%%%%%%% lowerBound(B)%%%%%%%%%%%%%%%%%%%%%%%%%
