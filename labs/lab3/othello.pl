@@ -79,23 +79,34 @@ initialize(InitialState, 1) :- termtest(InitialState).
 
 winner(State, Plyr) :-
 	terminal(State),
-	calcScore(State, Player1, Player2),
-	(Player1 < Player2, Plyr = 1;
-	 Player1 > Player2, Plyr = 2).
+	score(State, 1, S1),
+	score(State, 2, S2),
+	winner(S1, S2, Plyr).
 
-%% calcScore(State, Player1, Player2).
-%		- returns the score of current state for player1 and player2
-calcScore(State, Player1, Player2) :- 
-	flatten(State, Squares),
-	calcScoreInner(1, Squares, Player1),
-	calcScoreInner(2, Squares, Player2).
+winner(S1, S2, Plyr) :-
+	(S1 < S2, Plyr is 1) ; Plyr is 2.
 
-calcScoreInner(_, [], 0) :- !.
-calcScoreInner(Plyr,[Plyr|Squares], Score) :- 
-	calcScoreInner(Plyr, Squares, S),
-	Score is S + 1, !.
-calcScoreInner(Plyr,[_|Squares], Score) :- 
-	calcScoreInner(Plyr, Squares, Score).
+score([], _, 0).
+score([R | RS], Plyr, S) :-
+	score(R, Plyr, S1), score(RS, Plyr, S2), S is S1 + S2.
+
+score([X | R], Plyr, S) :-
+	X = Plyr, score(R, Plyr, S1), S is 1 + S1.
+
+score([X | R], Plyr, S) :-
+	X \= Plyr, score(R, Plyr, S).
+
+%calcScore(State, Player1, Player2) :- 
+%	flatten(State, Squares),
+%	calcScoreInner(1, Squares, Player1),
+%	calcScoreInner(2, Squares, Player2).
+%
+%calcScoreInner(_, [], 0) :- !.
+%calcScoreInner(Plyr,[Plyr|Squares], Score) :- 
+%	calcScoreInner(Plyr, Squares, S),
+%	Score is S + 1, !.
+%calcScoreInner(Plyr,[_|Squares], Score) :- 
+%	calcScoreInner(Plyr, Squares, Score).
 
 
 %%%%%%%%%%%%%%%%%% tie(...) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -104,8 +115,11 @@ calcScoreInner(Plyr,[_|Squares], Score) :-
 %    - true if terminal State is a "tie" (no winner) 
 
 tie(State) :- 
-	terminal(State), 
-	calcScore(State, Score, Score), !.
+	terminal(State),
+	flatten(State, NewState),
+	score(NewState, 1, S1),
+	score(NewState, 2, S2), 
+	S1 =:= S2.
 
 
 %%%%%%%%%%%%%%%%%% terminal(...) %%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -165,17 +179,21 @@ movesInner(Plyr, State, MvList, [_|Cs]) :- movesInner(Plyr, State, MvList, Cs).
 nextState(Plyr, pass, State, State, NextPlyr) :- getEnemy(Plyr, NextPlyr), !.
 nextState(Plyr, Move, State, NewState, NextPlyr) :-
 	getEnemy(Plyr, NextPlyr), cord(C),
-	flipper(C, Plyr, State, Move, NewState).
+	flipOuter(C, Plyr, State, Move, NewState).
 
 
-flipper([], _, State, _, State) :- !.
-flipper([Dir|Dirs], Plyr, State, Position, NextState) :-
+% flip in listed directions
+%
+flipOuter([], _, State, _, State) :- !.
+flipOuter([Dir|Dirs], Plyr, State, Position, NextState) :-
 	flip(Dir, Plyr, State, Position, InterState),
-	flipper(Dirs, Plyr, InterState, Position, NextState), !.
-flipper([_|Dirs], Plyr, State, Position, NextState) :-
-	flipper(Dirs, Plyr, State, Position, NextState).
+	flipOuter(Dirs, Plyr, InterState, Position, NextState), !.
+flipOuter([_|Dirs], Plyr, State, Position, NextState) :-
+	flipOuter(Dirs, Plyr, State, Position, NextState).
 
 
+% Flip in one direction
+%
 flip(Dir, Plyr, State, Pos, NextState) :-
 	inTheWay(Dir, Plyr, State, Pos, S),
 	FlipNumber is S + 1,
@@ -188,6 +206,16 @@ flipInner(Dir, Plyr, State, Pos, FlipNumber, NextState) :-
 	set(State, InterState, Pos, Plyr),
 	movedir(Dir, Pos, NextPos),
 	flipInner(Dir, Plyr, InterState, NextPos, AfterFlip, NextState), !.
+
+% Checks stones that are inbetween the player and the proposed move. returns score
+
+inTheWay(Dir, Plyr, State, Proposed, Score) :-
+	isOnTheBoard(Proposed),
+	movedir(Dir, Proposed, [NewX, NewY]),
+	get(State, [NewX, NewY], Square),
+	getEnemy(Plyr, Enemy),
+	(Square = Enemy, inTheWay(Dir, Plyr, State, [NewX, NewY], S), Score is S + 1, !;
+	 Square = Plyr, Score is 0, !; fail).
 
 
 %%%%%%%%%%%%%%%%%% validmove(Plyr,State,Proposed) %%%%%%%%%
@@ -205,19 +233,6 @@ validmoveInner([C|_], Plyr, State, Proposed) :-
     inTheWay(C, Plyr, State, Proposed, S), S > 0, !.
 validmoveInner([_|CS], Plyr, State, Proposed) :- validmoveInner(CS, Plyr, State, Proposed).
 
-	
-
-
-% Checks stones that are inbetween the player and the proposed move. returns score
-
-inTheWay(Dir, Plyr, State, Proposed, Score) :-
-	isOnTheBoard(Proposed),
-	movedir(Dir, Proposed, [NewX, NewY]),
-	get(State, [NewX, NewY], Square),
-	getEnemy(Plyr, Enemy),
-	(Square = Enemy, inTheWay(Dir, Plyr, State, [NewX, NewY], S), Score is S + 1, !;
-	 Square = Plyr, Score is 0, !;
-	 fail).
 
 %%%%%% MOVEMENTS %%%%%%%
 
