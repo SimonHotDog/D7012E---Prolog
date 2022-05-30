@@ -190,8 +190,7 @@ flip(Dir, Plyr, State, Pos, NextState) :-
 
 flipInner(_, _, State, _, 0, State).
 flipInner(Dir, Plyr, State, Pos, FlipNumber, NextState) :-
-	FlipNumber > 0,
-	AfterFlip is FlipNumber - 1,
+	FlipNumber > 0, AfterFlip is FlipNumber - 1,
 	set(State, InterState, Pos, Plyr),
 	movedir(Dir, Pos, NextPos),
 	flipInner(Dir, Plyr, InterState, NextPos, AfterFlip, NextState), !.
@@ -269,7 +268,7 @@ h(State, Val) :- score(State, 1, S1), score(State, 2, S2), Val is S2 - S1.
 %   - returns a value B that is less than the actual or heuristic value
 %     of all states.
 
-lowerBound(-101).
+lowerBound(-123).
 
 
 %%%%%%%%%%%%%%%%%% upperBound(B)%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -278,7 +277,7 @@ lowerBound(-101).
 %   - returns a value B that is greater than the actual or heuristic value
 %     of all states.
 
-upperBound(101).
+upperBound(123).
 
 
 % get(Board, Point, Element)
